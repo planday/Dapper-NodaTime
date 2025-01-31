@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Data;
-using System.Data.SqlClient;
+using System.Globalization;
 using NodaTime;
-
-#if NETSTANDARD1_3
-using DataException = System.InvalidOperationException;
-#endif
 
 namespace Dapper.NodaTime
 {
@@ -15,21 +11,23 @@ namespace Dapper.NodaTime
         {
         }
 
-        public static readonly LocalDateHandler Default = new LocalDateHandler();
+        public static readonly LocalDateHandler Default = new();
 
         public override void SetValue(IDbDataParameter parameter, LocalDate value)
         {
             parameter.Value = value.AtMidnight().ToDateTimeUnspecified();
 
-            if (parameter is SqlParameter sqlParameter)
-            {
-                sqlParameter.SqlDbType = SqlDbType.Date;
-            }
+            parameter.DbType = DbType.Date;
         }
 
         public override LocalDate Parse(object value)
         {
             if (value is DateTime dateTime)
+            {
+                return LocalDateTime.FromDateTime(dateTime).Date;
+            }
+
+            if (value is string strValue && DateTime.TryParse(strValue, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out dateTime))
             {
                 return LocalDateTime.FromDateTime(dateTime).Date;
             }

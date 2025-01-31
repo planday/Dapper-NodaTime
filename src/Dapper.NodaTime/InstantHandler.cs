@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Data;
-using System.Data.SqlClient;
+using System.Globalization;
 using NodaTime;
-
-#if NETSTANDARD1_3
-using DataException = System.InvalidOperationException;
-#endif
 
 namespace Dapper.NodaTime
 {
@@ -15,16 +11,13 @@ namespace Dapper.NodaTime
         {
         }
 
-        public static readonly InstantHandler Default = new InstantHandler();
+        public static readonly InstantHandler Default = new();
 
         public override void SetValue(IDbDataParameter parameter, Instant value)
         {
             parameter.Value = value.ToDateTimeUtc();
 
-            if (parameter is SqlParameter sqlParameter)
-            {
-                sqlParameter.SqlDbType = SqlDbType.DateTime2;
-            }
+            parameter.DbType = DbType.DateTime2;
         }
 
         public override Instant Parse(object value)
@@ -36,6 +29,11 @@ namespace Dapper.NodaTime
             }
 
             if (value is DateTimeOffset dateTimeOffset)
+            {
+                return Instant.FromDateTimeOffset(dateTimeOffset);
+            }
+
+            if (value is string strValue && DateTimeOffset.TryParse(strValue, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out dateTimeOffset))
             {
                 return Instant.FromDateTimeOffset(dateTimeOffset);
             }
